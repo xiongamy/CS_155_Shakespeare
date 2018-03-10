@@ -270,7 +270,7 @@ class HiddenMarkovModel:
         start_word = sd.word_from_id(start_id)
         emission = [start_word]
         states = [self.random_state_given_id(start_id)]
-        curr_s = random.sample(sd.syllables_of_word(start_word), 1)[0]
+        curr_s = abs(random.sample(sd.syllables_of_word(start_word), 1)[0])
         
         while curr_s < total_syllables:
             prev = states[-1]
@@ -312,7 +312,7 @@ class HiddenMarkovModel:
                 valid_s = set()
                 for s in syllables:
                     if s >= 0:
-                        valid_s.add(s)
+                        valid_s.add(s)  
                 curr_s += random.sample(valid_s, 1)[0]
         return emission
         
