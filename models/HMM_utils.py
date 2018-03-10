@@ -1,5 +1,67 @@
 import re
 
+class syllable_dict:
+
+    def __init__(self, fname='../data/Syllable_dictionary.txt'):
+        self.dict = {',' : {0}, '\'' : {0}, ':' : {0}, '.' : {0}, '?' : {0}, ';' : {0}, '(' : {0}, ')' : {0}, '!' : {0}}
+        self.words = [',', '\'', ':', '.', '?', ';', '(', ')', '!']
+        self.index_of = {',' : 0, '\'' : 1, ':' : 2, '.' : 3, '?' : 4, ';' : 5, '(' : 6, ')' : 7, '!' : 8}
+        current_index = 9
+        
+        self.words_with_syllable = {0 : set(self.words)}
+        self.words_with_end_syllable = {0 : set(self.words)}
+        
+        f = open(fname, 'r')
+        for line in f:
+            entries = line.split(' ')
+            num_entries = len(entries)
+            
+            word = entries[0]
+            self.words.append(word)
+            
+            self.index_of[word] = current_index
+            current_index += 1
+            
+            vals = set()
+            for i in range(1, num_entries):
+                entry = entries[i]
+                if entry[0] == 'E':
+                    num_syllables = int(entry[1:])
+                    vals.add(-num_syllables)
+                else:
+                    num_syllables = int(entry)
+                    vals.add(num_syllables)
+                
+                    if  num_syllables not in self.words_with_syllable:
+                        self.words_with_syllable[num_syllables] = set([word])
+                    else:
+                        self.words_with_syllable[num_syllables].add(word)
+                
+                if  num_syllables not in self.words_with_end_syllable:
+                    self.words_with_end_syllable[num_syllables] = set([word])
+                else:
+                    self.words_with_end_syllable[num_syllables].add(word)
+                
+            
+            self.dict[word] = vals
+        f.close()
+    
+    def ending_words_with_syllable(self, num_syllables):
+        return self.words_with_end_syllable[num_syllables]
+    
+    def words_with_syllable(self, num_syllables):
+        return self.words_with_syllable[num_syllables]
+    
+    def syllables_of_word(self, word):
+        return self.dict[word]
+    
+    def word_from_id(self, id):
+        return self.words[id]
+    
+    def id_from_word(self, word):
+        return self.index_of[word]
+        
+
 def get_training_data():
     '''
     Reads in the sonnets from shakespeare.txt and returns a list of lists,
