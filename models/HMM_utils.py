@@ -1,6 +1,4 @@
-import re
-
-class syllable_dict:
+class SyllableDict:
 
     def __init__(self, fname='../data/Syllable_dictionary.txt'):
         self.dict = {',' : {0}, '\'' : {0}, ':' : {0}, '.' : {0}, '?' : {0}, ';' : {0}, '(' : {0}, ')' : {0}, '!' : {0}}
@@ -60,42 +58,64 @@ class syllable_dict:
     
     def id_from_word(self, word):
         return self.index_of[word]
+    
+    def contains_word(self, word):
+        return word in self.dict
         
 
-def get_training_data():
+        
+
+def get_training_data(syllable_dict):
     '''
     Reads in the sonnets from shakespeare.txt and returns a list of lists,
     where each line in a sonnet is represented as a list whose elements
     are the words (and punctuation) in the line.
     '''
+    
+    def find_word_parts(word, l):
+        '''
+        Adds the words without punctuation as well as any punctuation in
+        the string to the list l.
+        '''
+        w = word
+        while len(w) > 0:
+            if syllable_dict.contains_word(w):
+                l.append(w)
+                find_word_parts(w[len(w):], l)
+                break
+            else:
+                w = w[:-1]
+        
     # read lines from the Shakespearan sonnet file
     lines = []
     with open('../data/shakespeare.txt', 'r') as f:
         for line in f:
+            line = line.strip()
             # ignore blank lines and the sonnet's number
-            if (not ' ' * 5 in line) or (line != '\n'):
+            if not line.isdigit() and line != '':
                 lines.append(line)
             
     # convert each line to a list of words
-    data = []
+    data_strings = []
+    punctuation = [',', '\'', ':', '.', '?', ';', '(', ')', '!']
     for line in lines:
         words = line.split()
         words_and_punct = []
         
         # find punctuation
         for word in words:
-            parts = re.split('(\W+)', word)
-            if len(parts) > 1:
-                for p in parts:
-                    #if p == "'":
-                        # check in dictionary for word
-                        
-                    if p != '':
-                        # add to list
-                        words_and_punct.append(p)
-            else:
-                words_and_punct.append(word)
+            word = word.lower()
+            find_word_parts(word, words_and_punct)
                 
-        data.append(words_and_punct)
+        data_strings.append(words_and_punct)
+        
+    # convert the words to their IDs
+    data = []
+    for line in data_strings:
+        for word in line:
+            data.append(syllable_dict.id_from_word(word))
         
     return data
+    
+sd = SyllableDict()
+print(get_training_data(sd))
