@@ -10,6 +10,9 @@ class SyllableDict:
         
         self.words_with_syllable = {0 : set(self.words)}
         self.words_with_end_syllable = {0 : set(self.words)}
+        for syllables in range(1, 11):
+            self.words_with_syllable[syllables] = set()
+            self.words_with_end_syllable[syllables] = set()
         
         f = open(fname, 'r')
         for line in f:
@@ -46,10 +49,10 @@ class SyllableDict:
             self.dict[word] = vals
         f.close()
     
-    def ending_words_with_syllable(self, num_syllables):
+    def ending_words_with_nsyllable(self, num_syllables):
         return self.words_with_end_syllable[num_syllables]
     
-    def words_with_syllable(self, num_syllables):
+    def words_with_nsyllable(self, num_syllables):
         return self.words_with_syllable[num_syllables]
     
     def syllables_of_word(self, word):
@@ -82,6 +85,8 @@ class RhymeDict:
         rhyme_sets = []
         word_to_sets = {}
         for i in range(len(training_data)):
+            if i >= 14*99 + 5:
+                i -= 1
             if not i % 14 in rhyme_lines:
                 continue
                 
@@ -95,12 +100,8 @@ class RhymeDict:
                 continue
                 
             # update the rhyme sets
-            word_in_set = False
-            rhyme_in_set = False
-            if word in word_to_sets:
-                word_in_set = True
-            if rhyme_word in word_to_sets:
-                rhyme_in_set = True
+            word_in_set = word in word_to_sets
+            rhyme_in_set = rhyme_word in word_to_sets
             
             if word_in_set and rhyme_in_set:
                 # are they in different sets?
@@ -114,12 +115,6 @@ class RhymeDict:
                     # update word_to_sets for all words in the other set
                     for key in other_set:
                         word_to_sets[key] = set_index
-                    
-                    # remove the other set and update set indices
-                    rhyme_sets.remove(other_set)
-                    for key, value in word_to_sets.items():
-                        if value > other_index:
-                            word_to_sets[key] = value - 1
             elif word_in_set:
                 # add rhyme_word to word's set
                 set_index = word_to_sets[word]
@@ -143,9 +138,9 @@ class RhymeDict:
         
 
     def get_all_rhyming_words(self):
-        all_words = set([])
-        for set in self.rhyme_sets:
-            all_words |= set
+        all_words = set()
+        for set_t in self.rhyme_sets:
+            all_words |= set_t
         return all_words
     
     def get_rhymes(self, word):

@@ -166,7 +166,7 @@ class HiddenMarkovModel:
         N = len(X)
         
         for iter in range(N_iters):
-            if iter % (N_iters / 10) == 0:
+            if iter % max((N_iters / 10, 1)) == 0:
                 print('iteration ' + str(iter) + ' of ' + str(N_iters))
             Ps = []
             Pp = []
@@ -235,51 +235,139 @@ class HiddenMarkovModel:
                             sum += Ps[j][i][z]
                     self.O[z][w] /= sum
 
-    def generate_emission(self, M):
+    def random_state_given_id(self, id):
+        sum = 0
+        for i in range(self.L):
+            sum += self.O[i][id]
+        
+        r = random.uniform(0, sum)
+        for i in range(self.L):
+            if r < self.O[i][id]:
+                break
+            else:
+                r -= self.O[i][id]
+        return i
+    
+    def generate_single_line(self, total_syllables, sd, start_id):
         '''
-        Generates an emission of length M, assuming that the starting state
+        Generates an emissions, assuming that the starting state
         is chosen uniformly at random. 
 
         Arguments:
-            M:          Length of the emission to generate.
+            total_syllables:    number of syllables to generate.
+            
+            rd:                 A rhyme dictionary object
+            
+            sd:                 A syllable dictionary object
+            
+            start_id:           Id of word to start with
 
         Returns:
             emission:   The randomly generated emission as a list.
 
             states:     The randomly generated states as a list.
         '''
-
-        emission = []
-        states = []
-
-        for i in range(M):
-            if i == 0:
-                r = random.random()
-                for j in range(self.L):
-                    if r < self.A_start[j]:
-                        break
-                    else:
-                        r -= self.A_start[j]
-                states.append(j)
-                
-            else:
-                prev = states[-1]
-                r = random.random()
-                for j in range(self.L):
-                    if r < self.A[prev][j]:
-                        break
-                    else:
-                        r -= self.A[prev][j]
-                states.append(j)
-                
-            r = random.random()
-            for x in range(self.D):
-                if r < self.O[j][x]:
+        start_word = sd.word_from_id(start_id)
+        emission = [start_word]
+        states = [self.random_state_given_id(start_id)]
+        curr_s = random.sample(sd.syllables_of_word(start_word), 1)[0]
+        
+        while curr_s < total_syllables:
+            prev = states[-1]
+            valid = set()
+            
+            sum = 0.
+            state_prob = [0.] * self.L
+            for num_syl in range(total_syllables - curr_s + 1):
+                for word in sd.words_with_nsyllable(num_syl):
+                    id = sd.id_from_word(word)
+                    if id not in valid:
+                        valid.add(id)
+                        for j in range(self.L):
+                            p = self.A[prev][j] * self.O[j][id]
+                            sum += p
+                            state_prob[j] += p
+                        
+            r = random.uniform(0, sum)
+            for j in range(self.L):
+                if r < state_prob[j]:
                     break
                 else:
-                    r -= self.O[j][x]
-            emission.append(x)
-        return emission, states
+                    r -= state_prob[j]
+            states.append(j)
+            
+            for id in valid:
+                if r < self.O[j][id]:
+                    break
+                else:
+                    r -= self.O[j][id]
+            word = sd.word_from_id(id)
+            emission.append(word)
+            
+            
+            syllables = sd.syllables_of_word(word)
+            if curr_s == 0:
+                curr_s += abs(random.sample(syllables, 1)[0])
+            else:
+                valid_s = set()
+                for s in syllables:
+                    if s >= 0:
+                        valid_s.add(s)
+                curr_s += random.sample(valid_s, 1)[0]
+        return emission
+        
+    def generate_emission(self, total_syllables, rd, sd):
+        '''
+        Generates a pair of emissions, assuming that the starting state
+        is chosen uniformly at random. 
+
+        Arguments:
+            total_syllables:    number of syllables to generate.
+            
+            rd:                 A rhyme dictionary object
+            
+            sd:                 A syllable dictionary object
+
+        Returns:
+            emission:   The randomly generated emission as a list.
+
+            states:     The randomly generated states as a list.
+        '''
+        
+        rw = rd.get_all_rhyming_words()
+        sum = 0.
+        state_prob = [0.] * self.L
+        for id in rw:
+            for j in range(self.L):
+                p = self.A_start[j] * self.O[j][id]
+                sum += p
+                state_prob[j] += p
+        
+        r = random.uniform(0, sum)
+        for j in range(self.L):
+            if r < state_prob[j]:
+                break
+            else:
+                r -= state_prob[j]
+        state = j
+        
+        for id in rw:
+            if r < self.O[j][id]:
+                break
+            else:
+                r -= self.O[j][id]
+        
+        first_line = self.generate_single_line(total_syllables, sd, id)
+        
+        
+        # change later
+        sample = random.sample(rd.get_rhymes(id), 2)
+        if sample[0] != id:
+            second_line = self.generate_single_line(total_syllables, sd, sample[0])
+        else:
+            second_line = self.generate_single_line(total_syllables, sd, sample[1])
+        
+        return first_line, second_line
 
 def unsupervised_HMM(X, n_states, N_iters):
     '''

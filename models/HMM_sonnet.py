@@ -1,12 +1,26 @@
 from HMM import unsupervised_HMM
-from HMM_utils import SyllableDict, get_training_data
+from HMM_utils import SyllableDict, RhymeDict, get_training_data
+
+def print_line(line):
+    print(' '.join(reversed(line)))
 
 sd = SyllableDict()
 X = get_training_data(sd)
-hmm = unsupervised_HMM(X, 3, 10)
-for i in range(14):
-    arrays = hmm.generate_emission(20)
-    print(' '.join([sd.word_from_id(id) for id in arrays[0]]))
+rd = RhymeDict(X)
+hmm = unsupervised_HMM(X, 10, 10)
+pairs = []
+for i in range(7):
+    pair = hmm.generate_emission(10, rd, sd)
+    pairs.append(pair)
+print(pairs)
+
+for stanza in range(3):
+    print_line(pairs[stanza * 2][0])
+    print_line(pairs[stanza * 2 + 1][0])
+    print_line(pairs[stanza * 2][1])
+    print_line(pairs[stanza * 2 + 1][1])
+print(' '.join(pairs[-1][0]))
+print(' '.join(pairs[-1][1]))
     
     
 '''    
