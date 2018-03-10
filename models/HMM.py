@@ -165,7 +165,9 @@ class HiddenMarkovModel:
         '''
         N = len(X)
         
-        for _ in range(N_iters):
+        for iter in range(N_iters):
+            if iter % (N_iters / 10) == 0:
+                print('iteration ' + str(iter) + ' of ' + str(N_iters))
             Ps = []
             Pp = []
             
@@ -303,7 +305,7 @@ def unsupervised_HMM(X, n_states, N_iters):
     
     # Compute L and D.
     L = n_states
-    D = len(observations)
+    D = 3214
 
     # Randomly initialize and normalize matrix A.
     A = [[random.random() for i in range(L)] for j in range(L)]
