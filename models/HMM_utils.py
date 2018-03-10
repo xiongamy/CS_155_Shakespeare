@@ -112,10 +112,9 @@ def get_training_data(syllable_dict):
     # convert the words to their IDs
     data = []
     for line in data_strings:
+        l = []
         for word in line:
-            data.append(syllable_dict.id_from_word(word))
+            l.append(syllable_dict.id_from_word(word))
+        data.append(l)
         
     return data
-    
-sd = SyllableDict()
-print(get_training_data(sd))
