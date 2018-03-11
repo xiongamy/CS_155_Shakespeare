@@ -2,6 +2,7 @@
 
 import random
 import math
+import os.path
 
 class HiddenMarkovModel:
     '''
@@ -48,6 +49,39 @@ class HiddenMarkovModel:
         self.O = O
         self.A_start = [1. / self.L for _ in range(self.L)]
 
+    def load_from_file(fname):
+        f = open(fname, 'r')
+        line = f.readline()
+        vars = line.split(' ')
+        
+        HMM = HiddenMarkovModel([[]], [[]])
+        HMM.L = int(vars[0])
+        HMM.D = int(vars[1])
+        
+        HMM.A_start = [float(e) for e in f.readline().split(' ')]
+        
+        HMM.A = []
+        for _ in range(HMM.L):
+            HMM.A.append([float(e) for e in f.readline().split(' ')])
+        
+        HMM.O = []
+        for _ in range(HMM.L):
+            HMM.O.append([float(e) for e in f.readline().split(' ')])
+        
+        f.close()
+        return HMM
+    
+    def save_to_file(self, fname):
+        f = open(fname, 'w+')
+        f.write(str(self.L) + ' ' +  str(self.D) + '\n')
+        
+        f.write(' '.join([str(e if e > 1e-10 else 0) for e in self.A_start]) + '\n')
+        for row in self.A:
+            f.write(' '.join([str(e if e > 1e-10 else 0) for e in row]) + '\n')
+        for row in self.O:
+            f.write(' '.join([str(e if e > 1e-10 else 0) for e in row]) + '\n')
+        f.close()
+        
     def forward(self, x, normalize=False):
         '''
         Uses the forward algorithm to calculate the alpha probability
@@ -150,7 +184,7 @@ class HiddenMarkovModel:
         return betas
 
 
-    def unsupervised_learning(self, X, N_iters):
+    def unsupervised_learning(self, X, N_iters, fname):
         '''
         Trains the HMM using the Baum-Welch algorithm on an unlabeled
         datset X. Note that this method does not return anything, but
@@ -162,12 +196,13 @@ class HiddenMarkovModel:
                         from 0 to D - 1. In other words, a list of lists.
 
             N_iters:    The number of iterations to train on.
+            
+            fname:      File name to save to
         '''
         N = len(X)
-        
         for iter in range(N_iters):
-            if iter % max((N_iters / 10, 1)) == 0:
-                print('iteration ' + str(iter) + ' of ' + str(N_iters))
+            print('iteration ' + str(iter + 1) + ' of ' + str(N_iters))
+            
             Ps = []
             Pp = []
             
@@ -234,6 +269,7 @@ class HiddenMarkovModel:
                                 self.O[z][w] += Ps[j][i][z]
                             sum += Ps[j][i][z]
                     self.O[z][w] /= sum
+            self.save_to_file(fname)
 
     def random_state_given_id(self, id):
         sum = 0
@@ -248,7 +284,7 @@ class HiddenMarkovModel:
                 r -= self.O[i][id]
         return i
     
-    def generate_single_line(self, total_syllables, sd, start_id):
+    def generate_single_line(self, total_syllables, sd, start_id, start_state=None):
         '''
         Generates an emissions, assuming that the starting state
         is chosen uniformly at random. 
@@ -261,6 +297,8 @@ class HiddenMarkovModel:
             sd:                 A syllable dictionary object
             
             start_id:           Id of word to start with
+            
+            start_state:        State to start with
 
         Returns:
             emission:   The randomly generated emission as a list.
@@ -269,7 +307,9 @@ class HiddenMarkovModel:
         '''
         start_word = sd.word_from_id(start_id)
         emission = [start_word]
-        states = [self.random_state_given_id(start_id)]
+        if start_state == None:
+            start_state = self.random_state_given_id(start_id)
+        states = [start_state]
         curr_s = abs(random.sample(sd.syllables_of_word(start_word), 1)[0])
         
         while curr_s < total_syllables:
@@ -357,7 +397,7 @@ class HiddenMarkovModel:
             else:
                 r -= self.O[j][id]
         
-        first_line = self.generate_single_line(total_syllables, sd, id)
+        first_line = self.generate_single_line(total_syllables, sd, id, state)
         
         
         # change later
@@ -369,7 +409,7 @@ class HiddenMarkovModel:
         
         return first_line, second_line
 
-def unsupervised_HMM(X, n_states, N_iters):
+def unsupervised_HMM(X, n_states, N_iters, fname):
     '''
     Helper function to train an unsupervised HMM. The function determines the
     number of unique observations in the given data, initializes
@@ -384,6 +424,8 @@ def unsupervised_HMM(X, n_states, N_iters):
         n_states:   Number of hidden states to use in training.
         
         N_iters:    The number of iterations to train on.
+        
+        fname:      File name to read from and write to
     '''
 
     # Make a set of observations.
@@ -395,24 +437,28 @@ def unsupervised_HMM(X, n_states, N_iters):
     L = n_states
     D = 3214
 
-    # Randomly initialize and normalize matrix A.
-    A = [[random.random() for i in range(L)] for j in range(L)]
+    if not os.path.exists(fname):
+        # Randomly initialize and normalize matrix A.
+        A = [[random.random() for i in range(L)] for j in range(L)]
 
-    for i in range(len(A)):
-        norm = sum(A[i])
-        for j in range(len(A[i])):
-            A[i][j] /= norm
-    
-    # Randomly initialize and normalize matrix O.
-    O = [[random.random() for i in range(D)] for j in range(L)]
+        for i in range(len(A)):
+            norm = sum(A[i])
+            for j in range(len(A[i])):
+                A[i][j] /= norm
+        
+        # Randomly initialize and normalize matrix O.
+        O = [[random.random() for i in range(D)] for j in range(L)]
 
-    for i in range(len(O)):
-        norm = sum(O[i])
-        for j in range(len(O[i])):
-            O[i][j] /= norm
+        for i in range(len(O)):
+            norm = sum(O[i])
+            for j in range(len(O[i])):
+                O[i][j] /= norm
 
-    # Train an HMM with unlabeled data.
-    HMM = HiddenMarkovModel(A, O)
-    HMM.unsupervised_learning(X, N_iters)
+        # Train an HMM with unlabeled data.
+        HMM = HiddenMarkovModel(A, O)
+    else:
+        HMM = HiddenMarkovModel.load_from_file(fname)
+        
+    HMM.unsupervised_learning(X, N_iters, fname)
 
     return HMM
