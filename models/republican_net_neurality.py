@@ -9,6 +9,8 @@ import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.layers import LSTM
+from keras.models import load_model
+from keras.optimizers import RMSprop
 from keras import regularizers
 
 
@@ -71,24 +73,53 @@ np_x = np.array(x_train)
 
 ### RNN (Single LSTM layer with ~150 cells)
 
+# First time usage
+'''
 model = Sequential()
-model.add(LSTM(150, input_shape=(1, 40)))
+model.add(LSTM(200, input_shape=(1, 40)))
 
 model.add(Dense(len(chars)))
 model.add(Activation('softmax'))
 
-# For a multi-class classification problem
-model.compile(optimizer='adam',
+optimizer = RMSprop(lr=0.01)
+model.compile(optimizer=optimizer,
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 
-# Train the model, iterating on the data in batches of 32 samples
-history = model.fit(np_x, y_train, epochs=5000, batch_size=32, verbose=1)
+model.save('../data/currnn.h5')
+'''
 
+model = load_model('../data/currnn.h5')
+
+# Train the model, iterating on the data in batches of 32 samples
+'''
+while True:
+    model.fit(np_x, y_train, epochs=5, batch_size=32, verbose=1)
+    model.save('../data/currnn.h5')
+    print('Model saved.')
 
 ### Predictions
+'''
+def better_log(preds):
+    new_p = []
+    for p in preds:
+        if p == 0:
+            new_p.append(-1 * math.inf)
+        else:
+            new_p.append(np.log(p))
+    return np.array(new_p)
 
-new_sonnet = np.full(40, '')
+# Borrowed from keras repo examples
+def sample(preds, temperature=1.0):
+    # helper function to sample an index from a probability array
+    preds = np.asarray(preds).astype('float64')
+    preds = better_log(preds) / temperature
+    exp_preds = np.exp(preds)
+    preds = exp_preds / np.sum(exp_preds)
+    probas = np.random.multinomial(1, preds, 1)
+    return np.argmax(probas)
+
+new_sonnet = np.array(list('SHALL I COMPARE THEE TO A SUMMER\'S DAY?\n'))
 next_char = ''
 while next_char != 'END':
     sl = len(new_sonnet)
@@ -97,12 +128,13 @@ while next_char != 'END':
         sonnet_vals[0, 0, i] = cdict[c]
     np_test = np.array(sonnet_vals)
 
-    next_val = model.predict_classes(x=np_test)[0]
+    next_val = model.predict(x=np_test)[0]
+    # Change temperature here
+    next_val2 = sample(next_val, 0.7)
 
-    next_char = cdict_rev[next_val]
+    next_char = cdict_rev[next_val2]
     print(next_char, end=' ')
     new_sonnet = np.append(new_sonnet, next_char)
 
-print(new_sonnet)
-'''
-np.savetxt("../sonnets/rnn_sonnets.txt", save, fmt='%i', delimiter=',', header='Id,Prediction', comments='')'''
+
+#np.savetxt("../sonnets/rnn_sonnets.txt", save, fmt='%i', delimiter=',', header='Id,Prediction', comments='')
