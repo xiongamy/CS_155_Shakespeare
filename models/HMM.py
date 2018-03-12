@@ -50,6 +50,7 @@ class HiddenMarkovModel:
         self.A_start = [1. / self.L for _ in range(self.L)]
 
     def load_from_file(fname):
+        # Loads an HMM from a file saved by save_to_file().
         f = open(fname, 'r')
         line = f.readline()
         vars = line.split(' ')
@@ -72,6 +73,7 @@ class HiddenMarkovModel:
         return HMM
     
     def save_to_file(self, fname):
+        # Saves an HMM to file fname.
         f = open(fname, 'w+')
         f.write(str(self.L) + ' ' +  str(self.D) + '\n')
         
@@ -272,6 +274,10 @@ class HiddenMarkovModel:
             self.save_to_file(fname)
 
     def random_state_given_id(self, id):
+        '''
+        Gives a state that could produce the given ID (randomly chosen,
+        using weighted probabilities).
+        '''
         sum = 0
         for i in range(self.L):
             sum += self.O[i][id]
@@ -305,17 +311,24 @@ class HiddenMarkovModel:
 
             states:     The randomly generated states as a list.
         '''
+        # Initialize with starting word and starting state from
+        # given start_id and start_state.
         start_word = sd.word_from_id(start_id)
         emission = [start_word]
         if start_state == None:
             start_state = self.random_state_given_id(start_id)
         states = [start_state]
+        
+        # current number of syllables in the emission
         curr_s = abs(random.sample(sd.syllables_of_word(start_word), 1)[0])
         
         while curr_s < total_syllables:
             prev = states[-1]
             valid = set()
             
+            # constructs A' and O' using only words that have a number of
+            # syllables less than or equal to the remaining number
+            # of syllables
             sum = 0.
             state_prob = [0.] * self.L
             for num_syl in range(total_syllables - curr_s + 1):
@@ -328,6 +341,7 @@ class HiddenMarkovModel:
                             sum += p
                             state_prob[j] += p
                         
+            # randomly generate next state (using A')
             r = random.uniform(0, sum)
             for j in range(self.L):
                 if r < state_prob[j]:
@@ -336,6 +350,7 @@ class HiddenMarkovModel:
                     r -= state_prob[j]
             states.append(j)
             
+            # randomly generate next word given the state (using O')
             for id in valid:
                 if r < self.O[j][id]:
                     break
@@ -344,7 +359,7 @@ class HiddenMarkovModel:
             word = sd.word_from_id(id)
             emission.append(word)
             
-            
+            # update current number of syllables
             syllables = sd.syllables_of_word(word)
             if curr_s == 0:
                 curr_s += abs(random.sample(syllables, 1)[0])
@@ -354,12 +369,13 @@ class HiddenMarkovModel:
                     if s >= 0:
                         valid_s.add(s)  
                 curr_s += random.sample(valid_s, 1)[0]
+                
         return emission
     
     def generate_emission_without_structure(self, M):
         '''
         Generates an emission of length M, assuming that the starting state
-        is chosen uniformly at random. 
+        is chosen uniformly at random. (Naive HMM)
 
         Arguments:
             M:          Length of the emission to generate.
@@ -375,6 +391,7 @@ class HiddenMarkovModel:
 
         for i in range(M):
             if i == 0:
+                # randomly generate first state
                 r = random.random()
                 for j in range(self.L):
                     if r < self.A_start[j]:
@@ -384,6 +401,7 @@ class HiddenMarkovModel:
                 states.append(j)
                 
             else:
+                # randomly generate next state
                 prev = states[-1]
                 r = random.random()
                 for j in range(self.L):
@@ -393,6 +411,7 @@ class HiddenMarkovModel:
                         r -= self.A[prev][j]
                 states.append(j)
                 
+            # randomly generate next word, given the state
             r = random.random()
             for x in range(self.D):
                 if r < self.O[j][x]:
@@ -400,12 +419,14 @@ class HiddenMarkovModel:
                 else:
                     r -= self.O[j][x]
             emission.append(x)
+            
         return emission
     
     def generate_emission(self, total_syllables, rd, sd):
         '''
         Generates a pair of emissions, assuming that the starting state
-        is chosen uniformly at random. 
+        is chosen uniformly at random. The two emissions will start
+        with words that rhyme.
 
         Arguments:
             total_syllables:    number of syllables to generate.
@@ -420,6 +441,7 @@ class HiddenMarkovModel:
             states:     The randomly generated states as a list.
         '''
         
+        # construct A' and O' using only words that have rhymes
         rw = rd.get_all_rhyming_words()
         sum = 0.
         state_prob = [0.] * self.L
@@ -429,6 +451,7 @@ class HiddenMarkovModel:
                 sum += p
                 state_prob[j] += p
         
+        # randomly generate state (using A')
         r = random.uniform(0, sum)
         for j in range(self.L):
             if r < state_prob[j]:
@@ -437,21 +460,19 @@ class HiddenMarkovModel:
                 r -= state_prob[j]
         state = j
         
+        # randomly generate (rhyming) word given the state (using O')
         for id in rw:
             if r < self.O[j][id]:
                 break
             else:
                 r -= self.O[j][id]
         
+        # generate full line from the starting rhyming word
         first_line = self.generate_single_line(total_syllables, sd, id, state)
         
-        
-        # change later
-        sample = random.sample(rd.get_rhymes(id), 2)
-        if sample[0] != id:
-            second_line = self.generate_single_line(total_syllables, sd, sample[0])
-        else:
-            second_line = self.generate_single_line(total_syllables, sd, sample[1])
+        # randomly generate a word that rhymes and its corresponding full line
+        second_word = random.sample(rd.get_rhymes(id), 1)[0]
+        second_line = self.generate_single_line(total_syllables, sd, second_word)
         
         return first_line, second_line
 

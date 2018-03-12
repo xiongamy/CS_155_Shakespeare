@@ -2,13 +2,18 @@ punctuation = [',', '\'', ':', '.', '?', ';', '(', ')', '!']
 punctuationIDs = range(9)
 
 class SyllableDict:
-
+    '''
+    Class representing a syllable dictionary, where each word in the dict corresponds to a
+    number of syllables (as listed in the file Syllable_dictionary.txt).
+    '''
     def __init__(self, fname='../data/Syllable_dictionary.txt'):
+        # add punctuation marks to syllable dictionary with the number of syllables set to 0
         self.dict = {',' : {0}, '\'' : {0}, ':' : {0}, '.' : {0}, '?' : {0}, ';' : {0}, '(' : {0}, ')' : {0}, '!' : {0}}
         self.words = punctuation[:]
         self.index_of = {',' : 0, '\'' : 1, ':' : 2, '.' : 3, '?' : 4, ';' : 5, '(' : 6, ')' : 7, '!' : 8}
         current_index = 9
         
+        # generate a new empty set for each possible number of syllables (1 to 10)
         self.words_with_syllable = {0 : set(self.words)}
         self.words_with_end_syllable = {0 : set(self.words)}
         for syllables in range(1, 11):
@@ -17,6 +22,7 @@ class SyllableDict:
         
         f = open(fname, 'r')
         for line in f:
+            # split each entry into the word and its possible number of syllables
             entries = line.split(' ')
             num_entries = len(entries)
             
@@ -26,6 +32,8 @@ class SyllableDict:
             self.index_of[word] = current_index
             current_index += 1
             
+            # update syllable dictionary for the word and each of its possible
+            # number of syllables
             vals = set()
             for i in range(1, num_entries):
                 entry = entries[i]
@@ -51,26 +59,39 @@ class SyllableDict:
         f.close()
     
     def ending_words_with_nsyllable(self, num_syllables):
+        # Returns a set with all the words that have n number of syllables
+        # if it is the ending word
         return self.words_with_end_syllable[num_syllables]
     
     def words_with_nsyllable(self, num_syllables):
+        # Returns a set with all the words that have n number of syllables
         return self.words_with_syllable[num_syllables]
     
     def syllables_of_word(self, word):
+        # Returns a set of all possible number of syllables the given
+        # word has (with negatives indicating this is only syllable
+        # count if the word is at the end of the line)
         return self.dict[word]
     
     def word_from_id(self, id):
+        # Returns the word (as a string) from the given ID
         return self.words[id]
     
     def id_from_word(self, word):
+        # Returns the ID of the given word
         return self.index_of[word]
     
     def contains_word(self, word):
+        # Returns whether the word is in the syllable dictionary
         return word in self.dict
 
 
 
 class RhymeDict:
+    '''
+    Class representing a rhyming dictionary from the rhymes in the given
+    training data.
+    '''
     def __init__(self, training_data):
     
         def get_first_word(line):
@@ -138,15 +159,18 @@ class RhymeDict:
         
 
     def get_all_rhyming_words(self):
+        # Get a set of all words that have rhymes.
         all_words = set()
         for set_t in self.rhyme_sets:
             all_words |= set_t
         return all_words
     
     def get_rhymes(self, word):
+        # Get a set of all the words that rhyme with the given word.
         return self.rhyme_sets[self.word_to_sets[word]]
         
     def print_rhyme_sets(self, syllable_dict):
+        # Print the rhyme sets as lists of strings to the console.
         rhymes_as_words = []
         for s in self.rhyme_sets:
             set_words = set([])
