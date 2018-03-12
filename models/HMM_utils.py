@@ -1,4 +1,5 @@
 punctuation = [',', '\'', ':', '.', '?', ';', '(', ')', '!']
+punctuationIDs = range(9)
 
 class SyllableDict:
 
@@ -73,11 +74,11 @@ class RhymeDict:
     def __init__(self, training_data):
     
         def get_first_word(line):
-            # skip punctuation to get the first word
+            # skip punctuation to get the first word (returned as an ID)
             for j in range(len(line)):
-                if not line[j] in punctuation:
+                if not line[j] in punctuationIDs:
                     return line[j]
-            return ''
+            return -1
             
         # rhyme scheme is abab cdcd efef gg
         rhyme_lines = [0, 1, 4, 5, 8, 9, 12]
@@ -85,8 +86,6 @@ class RhymeDict:
         rhyme_sets = []
         word_to_sets = {}
         for i in range(len(training_data)):
-            if i >= 14*99 + 5:
-                i -= 1
             if not i % 14 in rhyme_lines:
                 continue
                 
@@ -96,7 +95,7 @@ class RhymeDict:
             else:
                 rhyme_word = get_first_word(training_data[i + 2])
                 
-            if word == '' or rhyme_word == '':
+            if word == -1 or rhyme_word == -1:
                 continue
                 
             # update the rhyme sets
@@ -132,6 +131,7 @@ class RhymeDict:
                 rhyme_sets.append(new_set)
                 word_to_sets[word] = set_index
                 word_to_sets[rhyme_word] = set_index
+                
         
         self.rhyme_sets = rhyme_sets
         self.word_to_sets = word_to_sets
@@ -146,12 +146,24 @@ class RhymeDict:
     def get_rhymes(self, word):
         return self.rhyme_sets[self.word_to_sets[word]]
         
+    def print_rhyme_sets(self, syllable_dict):
+        rhymes_as_words = []
+        for s in self.rhyme_sets:
+            set_words = set([])
+            for id in s:
+                set_words.add(syllable_dict.word_from_id(id))
+            
+            rhymes_as_words.append(set_words)
+            
+        print(rhymes_as_words)
+        
 
 def get_training_data(syllable_dict):
     '''
     Reads in the sonnets from shakespeare.txt and returns a list of lists,
     where each line in a sonnet is represented as a list whose elements
-    are the words (and punctuation) in the line.
+    are the IDs of the words (and punctuation) in the line, where each
+    line is in reverse order.
     '''
     
     def find_word_parts(word, l):
@@ -163,7 +175,7 @@ def get_training_data(syllable_dict):
         while len(w) > 0:
             if syllable_dict.contains_word(w):
                 l.append(w)
-                find_word_parts(w[len(w):], l)
+                find_word_parts(word[len(w):], l)
                 break
             else:
                 w = w[:-1]
