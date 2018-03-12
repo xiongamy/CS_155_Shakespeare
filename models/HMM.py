@@ -355,7 +355,53 @@ class HiddenMarkovModel:
                         valid_s.add(s)  
                 curr_s += random.sample(valid_s, 1)[0]
         return emission
-        
+    
+    def generate_emission_without_structure(self, M):
+        '''
+        Generates an emission of length M, assuming that the starting state
+        is chosen uniformly at random. 
+
+        Arguments:
+            M:          Length of the emission to generate.
+
+        Returns:
+            emission:   The randomly generated emission as a list.
+
+            states:     The randomly generated states as a list.
+        '''
+
+        emission = []
+        states = []
+
+        for i in range(M):
+            if i == 0:
+                r = random.random()
+                for j in range(self.L):
+                    if r < self.A_start[j]:
+                        break
+                    else:
+                        r -= self.A_start[j]
+                states.append(j)
+                
+            else:
+                prev = states[-1]
+                r = random.random()
+                for j in range(self.L):
+                    if r < self.A[prev][j]:
+                        break
+                    else:
+                        r -= self.A[prev][j]
+                states.append(j)
+                
+            r = random.random()
+            for x in range(self.D):
+                if r < self.O[j][x]:
+                    break
+                else:
+                    r -= self.O[j][x]
+            emission.append(x)
+        return emission
+    
     def generate_emission(self, total_syllables, rd, sd):
         '''
         Generates a pair of emissions, assuming that the starting state
