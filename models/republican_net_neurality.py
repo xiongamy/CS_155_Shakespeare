@@ -1,11 +1,3 @@
-# take this out #
-import tensorflow as tf
-config = tf.ConfigProto(device_count={'GPU': 0})
-sess = tf.Session(config=config)
-from keras import backend as K
-K.set_session(sess)
-# take this out #
-
 import numpy as np
 import random
 import math
