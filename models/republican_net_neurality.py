@@ -113,7 +113,7 @@ while True:
 
 # helper function for keras' bugged sample function:
 # takes elementwise log of a numpy array, and returns -inf
-# in case of 0
+# in case of 0 (instead of just breaking)
 def better_log(preds):
     new_p = []
     for p in preds:
